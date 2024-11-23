@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Add Task</title>
+  <style>
+    /* Reset styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+
+    /* Main styling */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f5f3f9;
+    }
+
+    .container {
+      background-color: #ffffff;
+      padding: 2rem;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #6b46c1;
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+      position: relative;
+    }
+
+    label {
+      font-size: 0.9rem;
+      color: #6b46c1;
+      position: absolute;
+      top: -8px;
+      left: 10px;
+      background-color: #fff;
+      padding: 0 0.4em;
+      z-index: 1;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 0.8rem;
+      font-size: 1rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 8px;
+      outline: none;
+      transition: border 0.3s;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      border-color: #6b46c1;
+    }
+
+    /* Submit button styling */
+    button[type="submit"] {
+      width: 100%;
+      padding: 0.8rem;
+      background-color: #6b46c1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button[type="submit"]:hover {
+      background-color: #553c9a;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Add New Task</h1>
+  <form th:action="@{/tasks/add}" method="post">
+    <div class="form-group">
+      <label for="title">Title</label>
+      <input type="text" id="title" name="title" required/>
+    </div>
+
+    <div class="form-group">
+      <label for="description">Description</label>
+      <input type="text" id="description" name="description"/>
+    </div>
+
+    <div class="form-group">
+      <label for="dueDate">Due Date</label>
+      <input type="date" id="dueDate" name="dueDate" required
+             th:attr="min=${#dates.format(#dates.createNow(), 'yyyy-MM-dd')}"/>
+    </div>
+
+    <div class="form-group">
+      <label for="priority">Priority</label>
+      <select id="priority" name="priority">
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="category">Category</label>
+      <select id="category" name="category.id" required>
+        <option value="" disabled selected>Select Category</option>
+        <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"></option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="status">Status</label>
+      <select id="status" name="status" required>
+        <option value="Not Started">Not Started</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+
+    <button type="submit">Add Task</button>
+  </form>
+</div>
+</body>
+</html>
