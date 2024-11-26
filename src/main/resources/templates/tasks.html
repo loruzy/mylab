@@ -134,27 +134,31 @@
         <form th:action="@{/tasks/add}" method="get" class="form-inline">
             <button type="submit">Add New Task</button>
         </form>
+
+        <!-- Sort by Due Date -->
         <form th:action="@{/tasks/sort/dueDate}" method="get" class="form-inline">
             <button type="submit">Sort by Due Date</button>
         </form>
+
+        <!-- Filter by Status -->
         <form th:action="@{/tasks/filter/status}" method="get" class="form-inline">
             <label for="status">Filter by Status:</label>
-            <select id="status" name="status">
-                <option value="Not Started">Not Started</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
+            <select id="status" name="status" onchange="this.form.submit()">
+                <option value="Not Started" th:selected="${status == 'Not Started'}">Not Started</option>
+                <option value="In Progress" th:selected="${status == 'In Progress'}">In Progress</option>
+                <option value="Completed" th:selected="${status == 'Completed'}">Completed</option>
             </select>
-            <button type="submit">Filter</button>
         </form>
+
+        <!-- Filter by Category -->
         <form th:action="@{/tasks/filter/category}" method="get" class="form-inline">
             <label for="category">Filter by Category:</label>
-            <select id="category" name="categoryId">
-                <option value="3">Study</option>
-                <option value="1">Work</option>
-                <option value="2">Personal</option>
-                <option value="4">Other</option>
+            <select id="category" name="categoryId" onchange="this.form.submit()">
+                <option value="1" th:selected="${categoryId == 1}">Work</option>
+                <option value="2" th:selected="${categoryId == 2}">Personal</option>
+                <option value="3" th:selected="${categoryId == 3}">Study</option>
+                <option value="4" th:selected="${categoryId == 4}">Other</option>
             </select>
-            <button type="submit">Filter</button>
         </form>
     </div>
 
@@ -185,6 +189,16 @@
             </td>
         </tr>
     </table>
+
+    <!-- Pagination -->
+    <div th:if="${tasks.size() > 0}">
+        <button th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                th:if="${i != currentPage}"
+                th:href="@{/tasks(page=${i}, status=${status}, categoryId=${categoryId})}">
+            <span th:text="${i + 1}"></span>
+        </button>
+        <span th:if="${i == currentPage}" th:text="${i + 1}"></span>
+    </div>
 
     <div th:if="${tasks.isEmpty()}" class="no-tasks">
         <p>No tasks available. Please add a task.</p>

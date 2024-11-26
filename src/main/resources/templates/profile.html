@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>User Profile</title>
+  <style>
+    /* Add your styles here */
+  </style>
+</head>
+<body>
+<h1>Profile of <span th:text="${user.username}"></span></h1>
+
+<form th:action="@{/profile/update}" method="post">
+  <div>
+    <label>Email:</label>
+    <input type="email" name="email" th:value="${user.email}" required>
+  </div>
+  <div>
+    <label>Profile Image:</label>
+    <input type="text" name="profileImageUrl" th:value="${user.profileImageUrl}">
+  </div>
+  <button type="submit">Update Profile</button>
+</form>
+
+<form th:action="@{/profile/change-password}" method="post">
+  <div>
+    <label>Old Password:</label>
+    <input type="password" name="oldPassword" required>
+  </div>
+  <div>
+    <label>New Password:</label>
+    <input type="password" name="newPassword" required>
+  </div>
+  <button type="submit">Change Password</button>
+</form>
+
+<form th:action="@{/profile/upload-photo}" method="post" enctype="multipart/form-data">
+  <div>
+    <label>Upload Profile Photo:</label>
+    <input type="file" name="photo">
+  </div>
+  <button type="submit">Upload Photo</button>
+</form>
+
+</body>
+</html>

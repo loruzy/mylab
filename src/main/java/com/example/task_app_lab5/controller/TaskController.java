@@ -7,122 +7,119 @@ import com.example.task_app_lab5.repository.CategoryRepo;
 import com.example.task_app_lab5.repository.TaskRepo;
 import com.example.task_app_lab5.repository.UserRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
-
 @Controller
 public class TaskController {
+
     @Autowired
     private TaskRepo taskRepository;
+
     @Autowired
     private UserRepo userRepo;
+
     @Autowired
     private CategoryRepo categoryRepository;
 
     @GetMapping("/tasks")
-    public String viewTasks(@AuthenticationPrincipal UserDetails userDetails, Model model) {
+    public String viewTasks(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,  // Default to page 0
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "") Long categoryId,
+            Model model) {
+
         User_table user = userRepo.findByUsername(userDetails.getUsername());
         if (user == null) throw new IllegalStateException("User not found");
 
-        List<Tasks> tasks = taskRepository.findByUserId(user.getId());
-        model.addAttribute("tasks", tasks);
-        return "tasks";
-    }
+        Pageable pageable = PageRequest.of(page, 10);  // Pagination with 10 tasks per page
 
-    @GetMapping("/tasks/add")
-    public String showAddTaskForm(Model model) {
-        List<Category> categories = categoryRepository.findAll();
-        model.addAttribute("task", new Tasks());
-        model.addAttribute("categories", categories);
-        return "addTask";
-    }
+        Page<Tasks> taskPage;
 
-    @PostMapping("/tasks/add")
-    public String addTask(@ModelAttribute Tasks task, @AuthenticationPrincipal UserDetails userDetails) {
-        User_table user = userRepo.findByUsername(userDetails.getUsername());
-        if (user == null) throw new IllegalStateException("User not found");
+        // Apply filters if status or categoryId is provided
+        if (!status.isEmpty() && categoryId != null) {
+            taskPage = taskRepository.findByUserIdAndStatusAndCategoryId(user.getId(), status, categoryId, pageable);
+        } else if (!status.isEmpty()) {
+            taskPage = taskRepository.findByUserIdAndStatus(user.getId(), status, pageable);
+        } else if (categoryId != null) {
+            taskPage = taskRepository.findByUserIdAndCategoryId(user.getId(), categoryId, pageable);
+        } else {
+            taskPage = taskRepository.findByUserId(user.getId(), pageable);  // Fetch tasks without filters
+        }
 
-        task.setUser(user);
-        taskRepository.save(task);
-        return "redirect:/tasks";
-    }
-
-    @GetMapping("/tasks/edit/{id}")
-    public String showEditTaskForm(@PathVariable("id") long id, @AuthenticationPrincipal UserDetails userDetails, Model model) {
-        Tasks task = taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found: " + id));
-
-        User_table user = userRepo.findByUsername(userDetails.getUsername());
-        if (!task.getUser().equals(user)) throw new IllegalStateException("Access denied");
-
-        model.addAttribute("task", task);
+        model.addAttribute("tasks", taskPage.getContent());
+        model.addAttribute("totalPages", taskPage.getTotalPages());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("status", status);
+        model.addAttribute("categoryId", categoryId);
         model.addAttribute("categories", categoryRepository.findAll());
-        return "editTask";
+
+        return "tasks";  // View with tasks
     }
 
-    @PostMapping("/tasks/edit/{id}")
-    public String editTask(@PathVariable("id") long id, Tasks updatedTask, @AuthenticationPrincipal UserDetails userDetails) {
-        Tasks task = taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found: " + id));
+    // Methods for filtering and pagination, using Page for tasks
+    @PostMapping("/tasks/filter/status")
+    public String filterTaskByStatus(
+            @RequestParam("status") String status,
+            @RequestParam(defaultValue = "0") int page,
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model) {
 
         User_table user = userRepo.findByUsername(userDetails.getUsername());
-        if (!task.getUser().equals(user)) throw new IllegalStateException("Access denied");
+        if (user == null) throw new IllegalStateException("User not found");
 
-        task.setTitle(updatedTask.getTitle());
-        task.setDescription(updatedTask.getDescription());
-        task.setDueDate(updatedTask.getDueDate());
-        task.setStatus(updatedTask.getStatus());
-        task.setPriority(updatedTask.getPriority());
-        task.setCategory(updatedTask.getCategory());
-        taskRepository.save(task);
-        return "redirect:/tasks";
-    }
+        Pageable pageable = PageRequest.of(page, 10);
+        Page<Tasks> taskPage = taskRepository.findByUserIdAndStatus(user.getId(), status, pageable);
 
-    @GetMapping("/tasks/delete/{id}")
-    public String deleteTask(@PathVariable("id") long id, @AuthenticationPrincipal UserDetails userDetails) {
-        Tasks task = taskRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Task not found: " + id));
-
-        User_table user = userRepo.findByUsername(userDetails.getUsername());
-        if (!task.getUser().equals(user)) throw new IllegalStateException("Access denied");
-
-        taskRepository.delete(task);
-        return "redirect:/tasks";
-    }
-
-    @GetMapping("/tasks/filter/status")
-    public String filterTaskByStatus(@RequestParam("status") String status, @AuthenticationPrincipal UserDetails userDetails, Model model) {
-        User_table user = userRepo.findByUsername(userDetails.getUsername());
-        List<Tasks> tasks = taskRepository.findByUserIdAndStatus(user.getId(), status);
-        model.addAttribute("tasks", tasks);
+        model.addAttribute("tasks", taskPage.getContent());
+        model.addAttribute("totalPages", taskPage.getTotalPages());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("status", status);
         return "tasks";
     }
 
-    @GetMapping("/tasks/filter/category")
-    public String filterTaskByCategory(@RequestParam("categoryId") long categoryId, @AuthenticationPrincipal UserDetails userDetails, Model model) {
+    @PostMapping("/tasks/filter/category")
+    public String filterTaskByCategory(
+            @RequestParam("categoryId") Long categoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model) {
+
         User_table user = userRepo.findByUsername(userDetails.getUsername());
-        List<Tasks> tasks = taskRepository.findByUserIdAndCategoryId(user.getId(), categoryId);
-        model.addAttribute("tasks", tasks);
+        if (user == null) throw new IllegalStateException("User not found");
+
+        Pageable pageable = PageRequest.of(page, 10);
+        Page<Tasks> taskPage = taskRepository.findByUserIdAndCategoryId(user.getId(), categoryId, pageable);
+
+        model.addAttribute("tasks", taskPage.getContent());
+        model.addAttribute("totalPages", taskPage.getTotalPages());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("categoryId", categoryId);
         return "tasks";
     }
 
-    @GetMapping("/tasks/sort/dueDate")
-    public String sortTasksByDueDate(@AuthenticationPrincipal UserDetails userDetails, Model model) {
-        User_table user = userRepo.findByUsername(userDetails.getUsername());
-        List<Tasks> tasks = taskRepository.findByUserIdOrderByDueDate(user.getId());
-        model.addAttribute("tasks", tasks);
-        return "tasks";
-    }
+    @PostMapping("/tasks/sort/dueDate")
+    public String sortTasksByDueDate(
+            @RequestParam(defaultValue = "0") int page,
+            @AuthenticationPrincipal UserDetails userDetails,
+            Model model) {
 
-    @ExceptionHandler({IllegalStateException.class, IllegalArgumentException.class})
-    public String handleException(Exception e, Model model) {
-        model.addAttribute("error", e.getMessage());
-        return "errorPage"; // Страница с ошибкой
+        User_table user = userRepo.findByUsername(userDetails.getUsername());
+        if (user == null) throw new IllegalStateException("User not found");
+
+        Pageable pageable = PageRequest.of(page, 10);
+        Page<Tasks> taskPage = taskRepository.findByUserIdOrderByDueDate(user.getId(), pageable);
+
+        model.addAttribute("tasks", taskPage.getContent());
+        model.addAttribute("totalPages", taskPage.getTotalPages());
+        model.addAttribute("currentPage", page);
+        return "tasks";
     }
 }
